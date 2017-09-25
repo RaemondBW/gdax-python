@@ -4,7 +4,10 @@
 #
 # For public requests to the GDAX exchange
 
-import requests
+import urllib3
+from urllib3.contrib.appengine import AppEngineManager, is_appengine_sandbox
+import json
+import certifi
 
 
 class PublicClient(object):
@@ -26,6 +29,12 @@ class PublicClient(object):
 
         """
         self.url = api_url.rstrip('/')
+        if is_appengine_sandbox():
+            self.http = AppEngineManager(headers={'user-agent': 'Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.0'})
+        else:
+            self.http = urllib3.PoolManager(headers={'user-agent': 'Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.0'}, 
+                cert_reqs='CERT_REQUIRED',
+                ca_certs=certifi.where())
 
     def get_products(self):
         """Get a list of available currency pairs for trading.
@@ -45,9 +54,10 @@ class PublicClient(object):
                 ]
 
         """
-        r = requests.get(self.url + '/products', timeout=30)
+        # r = self.http.request('GET', self.url + '/products', timeout=30)
+        r = self.http.request('GET', self.url + '/products')
         # r.raise_for_status()
-        return r.json()
+        return json.loads(r.data.decode('utf-8'))
 
     def get_product_order_book(self, product_id, level=1):
         """Get a list of open orders for a product.
@@ -85,10 +95,10 @@ class PublicClient(object):
 
         """
         params = {'level': level}
-        r = requests.get(self.url + '/products/{}/book'
-                         .format(product_id), params=params, timeout=30)
+        r = self.http.request('GET', self.url + '/products/{}/book'
+                         .format(product_id), fields=params, timeout=30)
         # r.raise_for_status()
-        return r.json()
+        return json.loads(r.data.decode('utf-8'))
 
     def get_product_ticker(self, product_id):
         """Snapshot about the last trade (tick), best bid/ask and 24h volume.
@@ -112,10 +122,10 @@ class PublicClient(object):
                 }
 
         """
-        r = requests.get(self.url + '/products/{}/ticker'
+        r = self.http.request('GET', self.url + '/products/{}/ticker'
                          .format(product_id), timeout=30)
         # r.raise_for_status()
-        return r.json()
+        return json.loads(r.data.decode('utf-8'))
 
     def get_product_trades(self, product_id):
         """List the latest trades for a product.
@@ -140,9 +150,9 @@ class PublicClient(object):
                 }]
 
         """
-        r = requests.get(self.url + '/products/{}/trades'.format(product_id), timeout=30)
+        r = self.http.request('GET', self.url + '/products/{}/trades'.format(product_id), timeout=30)
         # r.raise_for_status()
-        return r.json()
+        return json.loads(r.data.decode('utf-8'))
 
     def get_product_historic_rates(self, product_id, start=None, end=None,
                                    granularity=None):
@@ -188,10 +198,10 @@ class PublicClient(object):
             params['end'] = end
         if granularity is not None:
             params['granularity'] = granularity
-        r = requests.get(self.url + '/products/{}/candles'
-                         .format(product_id), params=params, timeout=30)
+        r = self.http.request('GET', self.url + '/products/{}/candles'
+                         .format(product_id), fields=params, timeout=30)
         # r.raise_for_status()
-        return r.json()
+        return json.loads(r.data.decode('utf-8'))
 
     def get_product_24hr_stats(self, product_id):
         """Get 24 hr stats for the product.
@@ -210,9 +220,9 @@ class PublicClient(object):
                     }
 
         """
-        r = requests.get(self.url + '/products/{}/stats'.format(product_id), timeout=30)
+        r = self.http.request('GET', self.url + '/products/{}/stats'.format(product_id), timeout=30)
         # r.raise_for_status()
-        return r.json()
+        return json.loads(r.data.decode('utf-8'))
 
     def get_currencies(self):
         """List known currencies.
@@ -230,9 +240,9 @@ class PublicClient(object):
                 }]
 
         """
-        r = requests.get(self.url + '/currencies', timeout=30)
+        r = self.http.request('GET', self.url + '/currencies', timeout=30)
         # r.raise_for_status()
-        return r.json()
+        return json.loads(r.data.decode('utf-8'))
 
     def get_time(self):
         """Get the API server time.
@@ -246,6 +256,6 @@ class PublicClient(object):
                     }
 
         """
-        r = requests.get(self.url + '/time', timeout=30)
+        r = self.http.request('GET', self.url + '/time', timeout=30)
         # r.raise_for_status()
-        return r.json()
+        return json.loads(r.data.decode('utf-8'))
